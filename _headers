@@ -1,0 +1,43 @@
+# ── HEADERS PARA NETLIFY ────────────────────────────────────────────────────────
+# Guarda esto en la raíz de tu proyecto como _headers (SIN extensión)
+# Asegura que los archivos correctos se cachean correctamente
+
+# Service Worker: NUNCA cachear (siempre obtener la versión más nueva)
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# HTML: NUNCA cachear (siempre obtener la versión más nueva)
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Manifest: No cachear
+/manifest.json
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Assets estáticos: Cachear agresivamente (el SW maneja el update)
+/icons/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# CSS y JS: Cachear agresivamente
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+# Imágenes: Cachear por 1 año
+/images/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# CDNs: El navegador los cachea, nosotros no intervenimos
+https://cdn.jsdelivr.net/*
+  Cache-Control: public, max-age=31536000
+
+https://cdnjs.cloudflare.com/*
+  Cache-Control: public, max-age=31536000

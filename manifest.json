@@ -1,0 +1,29 @@
+{
+  "name": "Mis Finanzas",
+  "short_name": "Finanzas",
+  "description": "Dashboard personal de ingresos, gastos y tarjetas",
+  "version": "2.1",
+  "start_url": "/mobile",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f4f0",
+  "theme_color": "#1baf7a",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Cargar movimiento",
+      "short_name": "Cargar",
+      "description": "Agregar ingreso o gasto rápido",
+      "url": "/mobile"
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ver resumen financiero completo",
+      "url": "/"
+    }
+  ]
+}
+
