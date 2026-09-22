@@ -812,6 +812,7 @@ input[type=date]{color-scheme:light dark}
         <button class="trend-pill" onclick="preguntarEjemploDesktop('¿Cuánto debo de Visa Galicia?')">Deuda de tarjeta</button>
         <button class="trend-pill" onclick="preguntarEjemploDesktop('¿Cuánto tengo en gastos para el resto del mes?')">Gastos resto del mes</button>
         <button class="trend-pill" onclick="preguntarEjemploDesktop('¿Cómo es la evolución de consumos con tarjeta para los próximos 3 meses?')">Evolución tarjetas</button>
+        <button class="trend-pill" onclick="preguntarEjemploDesktop('¿Cuánto gasto por mes en Pendejito?')">Promedio mensual categoría</button>
       </div>
     </div>
     <div style="display:flex;gap:8px">
@@ -1983,6 +1984,23 @@ function responderPregunta(pregunta){
       return `Para lo que resta de ${monthLabel(mesActual)}: ${fmt(totalGastos)} en gastos pendientes y ${fmt(pendMovsInc)} en ingresos ya cargados. Balance neto restante: ${neto>=0?'+':''}${fmt(neto)}.`;
     }
     return `Para lo que resta de ${monthLabel(mesActual)} tenés ${fmt(totalGastos)} en gastos pendientes: ${fmt(pendMovsExp)} de movimientos ya cargados, ${fmt(pendDebitos)} de débitos automáticos y ${fmt(pendTarjetas)} de resúmenes de tarjeta.`;
+  }
+
+  // Promedio mensual de gasto en una categoría (mirando varios meses, no un período puntual)
+  if(/por mes|promedio mensual|en promedio|mensualmente/.test(txt)){
+    const catMatchProm = EXPENSE_CATS.find(c=>txt.includes(normalizarTexto(c)));
+    if(catMatchProm){
+      const mesesConDatos = allMonths().filter(mk=>mk<=nowKey());
+      const ultimosN = mesesConDatos.slice(-6);
+      let total = 0, mesesConGasto = 0;
+      ultimosN.forEach(mk=>{
+        const gastoMes = (data[mk]||[]).filter(t=>t.type==='expense' && t.cat===catMatchProm).reduce((s,t)=>s+t.amt,0);
+        if(gastoMes>0){ total += gastoMes; mesesConGasto++; }
+      });
+      if(mesesConGasto===0) return `No encontré gastos registrados en ${catMatchProm} en los últimos meses.`;
+      const promedio = total/mesesConGasto;
+      return `En ${catMatchProm} gastás un promedio de ${fmt(promedio)} por mes (calculado sobre ${mesesConGasto} mes${mesesConGasto>1?'es':''} con gasto registrado, de los últimos ${ultimosN.length}).`;
+    }
   }
 
   const periodo = resolverPeriodo(txt);
