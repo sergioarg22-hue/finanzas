@@ -2234,7 +2234,7 @@ function renderHist(){
         <div class="hist-meta" id="meta_${t.id}" onclick="editDateInline(${t.id},'${mk}')">${t.cat}${t.date?' · '+dayLabel(t.date)+'/'+t.date.slice(0,4)+' <i class=\"ti ti-pencil\" style=\"font-size:10px;opacity:.6\"></i>':''}</div>
       </div>
       <div class="hist-amt" id="amt_${t.id}" onclick="editAmtInline(${t.id},'${mk}')" style="color:${t.type==='income'?'var(--gr)':'var(--rd)'};cursor:pointer">
-        ${t.type==='income'?'+':'-'}${fmt(t.amt)} <i class="ti ti-pencil" style="font-size:9px;opacity:.5"></i>
+        ${t.type==='income'?'+':'-'}${(t.moneda||'ARS')==='USD'?'US$'+Math.abs(Math.round(t.amt)).toLocaleString('es-AR'):fmt(t.amt)} <i class="ti ti-pencil" style="font-size:9px;opacity:.5"></i>
       </div>
       <button class="hist-del" onclick="delTx('${mk}',${t.id})">×</button>
     </div>
@@ -3081,6 +3081,7 @@ function goScreen(screenId, navId){
 
 // ── ENTER en descripción guarda ───────────────────────────────────────────────
 // ── ASISTENTE DE PREGUNTAS (basado en patrones, sin IA) ────────────────────────
+let _ultimoContextoAsistente = null; // recuerda la última categoría+período consultados, para preguntas de seguimiento tipo "detallame eso"
 function normalizarTexto(s){
   return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 }
@@ -3273,7 +3274,26 @@ function responderPregunta(pregunta){
   const catMatch = EXPENSE_CATS.find(c=>txt.includes(normalizarTexto(c)));
   if(catMatch && /cuanto|gaste|gasto/.test(txt)){
     const total = txs.filter(t=>t.type==='expense' && t.cat===catMatch).reduce((s,t)=>s+t.amt,0);
+    _ultimoContextoAsistente = {categoria:catMatch, desde:periodo.desde, hasta:periodo.hasta, label:periodo.label};
     return `Gastaste ${fmt(total)} en ${catMatch} ${periodo.label}.`;
+  }
+
+  // Detalle/desglose de los gastos de una categoría (puede referirse a la pregunta anterior)
+  if(/detall|desglos|discrimin|listame|mostrame (el detalle|los gastos|las compras)/.test(txt)){
+    let categoria = catMatch;
+    let desde = periodo.desde, hasta = periodo.hasta, label = periodo.label;
+    if(!categoria && _ultimoContextoAsistente){
+      categoria = _ultimoContextoAsistente.categoria;
+      desde = _ultimoContextoAsistente.desde;
+      hasta = _ultimoContextoAsistente.hasta;
+      label = _ultimoContextoAsistente.label;
+    }
+    if(!categoria) return 'Decime de qué categoría querés el detalle (por ejemplo "detallame los gastos de Pendejito este mes").';
+    const itemsDetalle = txsEnRango(desde, hasta).filter(t=>t.type==='expense' && t.cat===categoria).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    if(!itemsDetalle.length) return `No encontré gastos en ${categoria} ${label}.`;
+    const lineas = itemsDetalle.map(t=>`${t.date?dayLabel(t.date)+' ':''}${t.desc}: ${fmt(t.amt)}`);
+    const totalDet = itemsDetalle.reduce((s,t)=>s+t.amt,0);
+    return `Detalle de ${categoria} ${label}:\n${lineas.join('\n')}\n\nTotal: ${fmt(totalDet)}`;
   }
 
   // Categoría con más gasto
