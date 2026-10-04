@@ -1127,7 +1127,7 @@ async function generarDebitoSiCorrespondeMobile(deb){
       cargadoPor:'Débito automático', timestamp:new Date().toISOString(), auto:true, debitoAutomaticoId:deb.id
     });
     await sbSet('fin_data', data);
-    if(deb.caja) await actualizarSaldoCaja(deb.caja, -deb.monto);
+    if(deb.caja) await actualizarSaldoCaja(deb.caja, -montoParaCaja(deb.caja, deb.monto, deb.moneda));
   }
   deb.ultimoMesGenerado = mesActual;
   return true;
@@ -1582,12 +1582,14 @@ async function guardar(){
   if(_type==='expense'){
     const cajaCheck = document.getElementById('fCaja').value;
     if(cajaCheck){
+      const monedaCheck = document.getElementById('fMoneda')?.value || 'ARS';
       const saldoActual = dispData[cajaCheck]||0;
-      const saldoResultante = saldoActual - amt;
+      const montoCheck = montoParaCaja(cajaCheck, amt, monedaCheck);
+      const saldoResultante = saldoActual - montoCheck;
       if(saldoResultante < 0){
         const saldoActualTxt = (saldoActual<0?'-':'')+fmt(saldoActual);
         const saldoResultanteTxt = '-'+fmt(saldoResultante);
-        const seguir = confirm(`⚠️ ${cajaCheck} va a quedar en negativo.\n\nSaldo actual: ${saldoActualTxt}\nEste gasto: ${fmt(amt)}\nSaldo resultante: ${saldoResultanteTxt}\n\n¿Es correcto? Si te olvidaste de hacer un pase entre cajas, cancelá y cargalo primero.`);
+        const seguir = confirm(`⚠️ ${cajaCheck} va a quedar en negativo.\n\nSaldo actual: ${saldoActualTxt}\nEste gasto: ${fmt(montoCheck)}\nSaldo resultante: ${saldoResultanteTxt}\n\n¿Es correcto? Si te olvidaste de hacer un pase entre cajas, cancelá y cargalo primero.`);
         if(!seguir) return;
       }
     }
@@ -1649,7 +1651,10 @@ async function guardar(){
         };
         data[mk].push(entry);
         // Actualizar saldo de la caja SOLO si la fecha ya llegó (si es futura, se aplica sola cuando llegue el día)
-        if(caja && yaOcurrio) actualizarSaldoCaja(caja, _type==='income'?amt:-amt);
+        if(caja && yaOcurrio){
+          const m = montoParaCaja(caja, amt, moneda);
+          actualizarSaldoCaja(caja, _type==='income'?m:-m);
+        }
       } else {
         // Recurrencia: calcular intervalo en días/meses según freq
         const FREQS = {
@@ -1658,7 +1663,6 @@ async function guardar(){
           semester:{months:6}, year:{months:12}
         };
         const interval = FREQS[freq] || {months:1};
-        const amtCaja = _type==='income'?amt:-amt;
         const hoyStr = todayStr();
 
         for(let i=0;i<recN;i++){
@@ -1682,7 +1686,10 @@ async function guardar(){
           };
           data[entryMk].push(entry);
           // Actualizar saldo SOLO de las ocurrencias que ya pasaron; las futuras se aplican solas cuando llega el día
-          if(caja && yaOcurrio) actualizarSaldoCaja(caja, amtCaja);
+          if(caja && yaOcurrio){
+            const m = montoParaCaja(caja, amt, moneda);
+            actualizarSaldoCaja(caja, _type==='income'?m:-m);
+          }
         }
       }
       await sbSet('fin_data', data);
@@ -1746,6 +1753,14 @@ async function actualizarSaldoCaja(caja, delta){
     console.error('Error guardando saldo:', e);
   }
 }
+// Convierte un monto a lo que realmente corresponde descontar/sumar de una caja puntual.
+// Si el movimiento es en USD pero la caja elegida no es una cuenta en dólares de verdad
+// (por el nombre), asumimos que se compraron/vendieron esos dólares con pesos y convertimos.
+function montoParaCaja(caja, amt, moneda){
+  if((moneda||'ARS')!=='USD') return amt;
+  const esCajaDolares = /usd|dolar|dólar/i.test(caja||'');
+  return esCajaDolares ? amt : amt*tipoCambio;
+}
 
 // Aplica a las cajas los movimientos con fecha ya cumplida que quedaron pendientes
 // (creados con fecha futura, o cargados desde otro dispositivo). Se corre al abrir la app.
@@ -1757,7 +1772,8 @@ async function aplicarMovimientosVencidosMobile(){
   Object.keys(data).forEach(mk=>{
     (data[mk]||[]).forEach(t=>{
       if(t.aplicadoCaja===false && t.caja && t.date && t.date<=hoyStr){
-        actualizarSaldoCajaSync(t.caja, t.type==='income'?t.amt:-t.amt);
+        const m = montoParaCaja(t.caja, t.amt, t.moneda);
+        actualizarSaldoCajaSync(t.caja, t.type==='income'?m:-m);
         t.aplicadoCaja = true;
         huboCambios = true;
       }
@@ -2304,8 +2320,9 @@ async function saveAmtInline(id, mk, newAmtStr){
   await sbSet('fin_data', data);
 
   // Si el movimiento tiene caja asociada, ajustar el saldo por la diferencia
-  if(tx.caja && delta !== 0){
-    const deltaCaja = tx.type==='income' ? delta : -delta;
+  if(tx.caja && delta !== 0 && tx.aplicadoCaja!==false){
+    const deltaConvertido = montoParaCaja(tx.caja, delta, tx.moneda);
+    const deltaCaja = tx.type==='income' ? deltaConvertido : -deltaConvertido;
     await actualizarSaldoCaja(tx.caja, deltaCaja);
   }
 
@@ -2501,7 +2518,13 @@ async function pagarResumenMobile(){
     await sbSet('fin_data', data);
 
     if(cajaArs && amtArs>0) await actualizarSaldoCaja(cajaArs, -amtArs);
-    if(cajaUsd && amtUsd>0) await actualizarSaldoCaja(cajaUsd, -amtUsd);
+    if(cajaUsd && amtUsd>0){
+      // Si la caja elegida no es una cuenta en dólares de verdad (por el nombre),
+      // asumimos que se compraron los dólares con pesos y se descuenta el equivalente en ARS.
+      const esCajaDolares = /usd|dolar|dólar/i.test(cajaUsd);
+      const montoADeducir = esCajaDolares ? amtUsd : amtUsd*tipoCambio;
+      await actualizarSaldoCaja(cajaUsd, -montoADeducir);
+    }
 
     // Marcar como pagado el resumen más antiguo pendiente (ambas monedas)
     const txs = (tcData[card]||[]).filter(t=>!t.paid);
