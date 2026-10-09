@@ -2776,7 +2776,7 @@ function renderTc(){
             </span>
             <span style="font-size:13px;font-weight:700;color:var(--pu-t)">${fmt(calc.totalFinal)}</span>
           </div>
-          ${subtotalUSD>0?`<div style="font-size:11px;color:var(--tm);margin-bottom:2px">Subtotal: ${fmt(subtotalARS)} + US$${subtotalUSD.toLocaleString('es-AR')}</div>`:''}
+          ${(subtotalUSD>0||calc.totalImpuestos>0)?`<div style="font-size:11px;color:var(--tm);margin-bottom:2px">Subtotal: ${[fmt(subtotalARS), subtotalUSD>0?`US$${subtotalUSD.toLocaleString('es-AR')} (≈${fmt(calc.subtotalUSDenARS)})`:null, calc.totalImpuestos>0?`impuestos ${fmt(calc.totalImpuestos)}`:null].filter(Boolean).join(' + ')}</div>`:''}
         </div>
         ${rows}
         ${impuestosHtml}`;
