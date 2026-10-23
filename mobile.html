@@ -1088,12 +1088,12 @@ async function saveDebitosAutomaticosMobile(){
 
 function initDebitosSelectsMobile(){
   document.getElementById('debCajaMobile').innerHTML = getTodasCuentas().map(c=>`<option>${c}</option>`).join('');
-  document.getElementById('debCategoriaMobile').innerHTML = EXPENSE_CATS.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('debCategoriaMobile').innerHTML = opcionesCats(EXPENSE_CATS);
 }
 
 function initDebitosTarjetaSelectsMobile(){
   document.getElementById('debTarjetaTCMobile').innerHTML = TARJETAS.map(t=>`<option>${t}</option>`).join('');
-  document.getElementById('debCategoriaTCMobile').innerHTML = TC_CATS.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('debCategoriaTCMobile').innerHTML = opcionesCats(TC_CATS);
 }
 
 // Genera el débito automático AHORA MISMO si el día ya llegó (o pasó) este mes,
@@ -1384,11 +1384,12 @@ async function loadAll(){
 }
 
 // ── UI INIT ───────────────────────────────────────────────────────────────────
+function opcionesCats(arr){ return [...arr].sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'})).map(c=>`<option>${c}</option>`).join(''); }
 function initUI(){
   document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
   document.getElementById('fDate').value = todayStr();
   document.getElementById('fTarjeta').innerHTML = TARJETAS.map(t=>`<option>${t}</option>`).join('');
-  document.getElementById('fTcCat').innerHTML   = TC_CATS.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('fTcCat').innerHTML   = opcionesCats(TC_CATS);
   // Poblar cajas
   const cajaHtml = `<option value="">— Sin especificar —</option>${getTodasCuentas().map(c=>`<option>${c}</option>`).join('')}`;
   document.getElementById('fCaja').innerHTML = cajaHtml;
@@ -1531,7 +1532,7 @@ function setType(t){
 
     if(t!=='tarjeta'){
       const cats = t==='income'?INCOME_CATS:EXPENSE_CATS;
-      document.getElementById('fCat').innerHTML = cats.map(c=>`<option>${c}</option>`).join('');
+      document.getElementById('fCat').innerHTML = opcionesCats(cats);
     } else {
       updateCuotasPreview();
       updateResumenManualOptions();
