@@ -1223,12 +1223,12 @@ async function saveDebitosAutomaticos(){
 function initDebitosSelects(){
   const TODAS = [...CUENTAS, ...AHORROS];
   document.getElementById('debCaja').innerHTML = TODAS.map(c=>`<option>${c}</option>`).join('');
-  document.getElementById('debCategoria').innerHTML = EXPENSE_CATS.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('debCategoria').innerHTML = opcionesCats(EXPENSE_CATS);
 }
 
 function initDebitosTarjetaSelects(){
   document.getElementById('debTarjetaTC').innerHTML = TARJETAS.map(t=>`<option>${t}</option>`).join('');
-  document.getElementById('debCategoriaTC').innerHTML = TC_CATS.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('debCategoriaTC').innerHTML = opcionesCats(TC_CATS);
 }
 
 // Genera el débito automático AHORA MISMO si el día ya llegó (o pasó) este mes,
@@ -1509,7 +1509,7 @@ function refrescarSelectsListas(){
   if(payCard) payCard.innerHTML = TARJETAS.map(t=>`<option>${t}</option>`).join('');
   // Categorías de tarjeta
   const tcCat = document.getElementById('tcCat');
-  if(tcCat) tcCat.innerHTML = TC_CATS.map(c=>`<option>${c}</option>`).join('');
+  if(tcCat) tcCat.innerHTML = opcionesCats(TC_CATS);
   // Re-renderizar todo lo visible
   render();
   renderDisp();
@@ -1729,7 +1729,7 @@ async function loadAll(){
     const payCard = document.getElementById('payCard');
     if(payCard) payCard.innerHTML = TARJETAS.map(t=>`<option>${t}</option>`).join('');
     const tcCat = document.getElementById('tcCat');
-    if(tcCat) tcCat.innerHTML = TC_CATS.map(c=>`<option>${c}</option>`).join('');
+    if(tcCat) tcCat.innerHTML = opcionesCats(TC_CATS);
   } catch(e){
     console.error('Error cargando datos:', e);
   }
@@ -1804,10 +1804,11 @@ function populateMonthSel(){
   months.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=monthLabel(k);if(k===cur)o.selected=true;sel.appendChild(o)});
 }
 
+function opcionesCats(arr){ return [...arr].sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'})).map(c=>`<option>${c}</option>`).join(''); }
 function updateCats(){
   const t=document.getElementById('fType').value;
   const cats=t==='income'?INCOME_CATS:EXPENSE_CATS;
-  document.getElementById('fCat').innerHTML=cats.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('fCat').innerHTML=opcionesCats(cats);
 }
 updateCats();
 
@@ -1818,7 +1819,7 @@ document.getElementById('fCaja').innerHTML = `<option value="">— Sin especific
 // Poblar selects de tarjetas
 document.getElementById('tcCard').innerHTML=TARJETAS.map(t=>`<option>${t}</option>`).join('');
 document.getElementById('payCard').innerHTML=TARJETAS.map(t=>`<option>${t}</option>`).join('');
-document.getElementById('tcCat').innerHTML=TC_CATS.map(c=>`<option>${c}</option>`).join('');
+document.getElementById('tcCat').innerHTML=opcionesCats(TC_CATS);
 
 // Fechas por defecto
 document.getElementById('fDate').value=todayStr();
