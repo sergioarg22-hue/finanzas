@@ -1,7 +1,7 @@
 // ── SERVICE WORKER - Mis Finanzas PWA (v2.1) ──────────────────────────────────
 // Sistema de versionado automático: cambia solo el número de versión al hacer deploy
 
-const APP_VERSION = '2.2'; // CAMBIAR AQUÍ en cada deploy (2.1 → 2.2, etc)
+const APP_VERSION = '3.0'; // v3: el HTML ya no queda pegado en caché (network-first)
 const CACHE_NAME = `finanzas-v${APP_VERSION}`;
 const ASSET_CACHE = `finanzas-assets-v${APP_VERSION}`;
 const API_CACHE = `finanzas-api-v${APP_VERSION}`;
@@ -77,19 +77,20 @@ self.addEventListener('fetch', event => {
     return;
   }
   
-  // 2. HTML (documentos): cache-first, fallback a network
+  // 2. HTML (documentos): network-first (siempre la versión más nueva); sin conexión, usa la copia guardada
   if (event.request.destination === 'document') {
     event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request).then(response => {
-          if (response.ok && url.origin === self.location.origin) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
-          return response;
-        }).catch(() => new Response('Offline - página no disponible', {status: 503}));
-      })
+      fetch(event.request).then(response => {
+        if (response.ok && url.origin === self.location.origin) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() =>
+        caches.match(event.request).then(cached =>
+          cached || new Response('Offline - página no disponible', {status: 503})
+        )
+      )
     );
     return;
   }
