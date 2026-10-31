@@ -289,6 +289,7 @@ module.exports = async (req, res) => {
 
   try {
     const today = todayStr();
+    const modoTest = !!(req.query && req.query.test === '1');
 
     // ── 0. Generar débitos automáticos que correspondan a hoy ─────────────────
     let debitosResultado = { generados: [] };
@@ -398,19 +399,20 @@ module.exports = async (req, res) => {
     }
 
     // Si no hay nada de nada, no molestamos con una notificación vacía
-    if (txsHoy.length === 0 && vencimientosHoy.length === 0 && gmailResultado.nuevos.length === 0 && debitosTarjetaHoy.length === 0) {
+    if (!modoTest && txsHoy.length === 0 && vencimientosHoy.length === 0 && gmailResultado.nuevos.length === 0 && debitosTarjetaHoy.length === 0) {
       return res.status(200).json({ success: true, enviados: 0, mensaje: 'Sin novedades, no se envió notificación.' });
     }
 
     const titulo = vencimientosHoy.length > 0
       ? '📋 Resumen de hoy — 💳 Venció hoy'
       : '📋 Resumen de hoy';
-    const cuerpo = seccionMovimientos + seccionDebitosTarjeta + seccionVencimientos + seccionGmail;
+    const cuerpo = (modoTest ? '🧪 Prueba de notificación\n' : '') + seccionMovimientos + seccionDebitosTarjeta + seccionVencimientos + seccionGmail;
 
     // ── Enviar push a todos los dispositivos suscriptos ──────────────────────
     const endpoints = Object.keys(subs);
     let enviados = 0;
     let fallidos = 0;
+    const errores = [];
 
     for (const endpoint of endpoints) {
       const { subscription } = subs[endpoint];
@@ -426,6 +428,7 @@ module.exports = async (req, res) => {
         enviados++;
       } catch (err) {
         fallidos++;
+        errores.push({ statusCode: err.statusCode || null, mensaje: String(err.body || err.message || '').slice(0, 200) });
         if (err.statusCode === 410 || err.statusCode === 404) {
           delete subs[endpoint];
         }
@@ -440,6 +443,8 @@ module.exports = async (req, res) => {
       success: true,
       enviados,
       fallidos,
+      errores,
+      dispositivos: endpoints.length,
       txsHoy: txsHoy.length,
       debitosGenerados: debitosResultado.generados,
       vencimientosHoy,
