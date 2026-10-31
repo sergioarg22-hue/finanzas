@@ -3529,8 +3529,17 @@ iniciarAutenticacion();
 if('serviceWorker' in navigator){
   window.addEventListener('load', async ()=>{
     try{
+      // Si hay una versión nueva de la app, recargar sola una vez
+      const _teniaControlador = !!navigator.serviceWorker.controller;
+      let _recargando = false;
+      navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+        if(!_teniaControlador || _recargando) return;
+        _recargando = true; location.reload();
+      });
       const reg = await navigator.serviceWorker.register('/sw.js');
       console.log('SW registrado:', reg.scope);
+      // Buscar actualizaciones cada vez que se vuelve a abrir la app
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) reg.update().catch(()=>{}); });
 
       // Solicitar permiso para notificaciones push (vencimientos de tarjeta)
       if('Notification' in window && Notification.permission === 'default'){
