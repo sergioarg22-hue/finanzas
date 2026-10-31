@@ -3820,8 +3820,18 @@ async function cambiarPasswordDesktop(){
 // ── SERVICE WORKER (PWA) ──────────────────────────────────────────────────────
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
+    // Si hay una versión nueva de la app, recargar sola una vez
+    const _teniaControlador = !!navigator.serviceWorker.controller;
+    let _recargando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(!_teniaControlador || _recargando) return;
+      _recargando = true; location.reload();
+    });
     navigator.serviceWorker.register('/sw.js')
-      .then(r=>console.log('SW registrado:', r.scope))
+      .then(r=>{
+        console.log('SW registrado:', r.scope);
+        document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) r.update().catch(()=>{}); });
+      })
       .catch(e=>console.log('SW error:', e));
   });
 }
