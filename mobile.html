@@ -733,7 +733,8 @@ select.field-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http:/
     </div>
   </div>
 
-  <div style="padding:0 16px 100px" id="configListasMobile"></div>
+  <div style="padding:0 16px 12px" id="configListasMobile"></div>
+  <div id="versionInfo" style="padding:0 16px 100px;font-size:11px;color:var(--tm);text-align:center"></div>
 </div>
 
 <!-- ── PANTALLA: DÉBITOS AUTOMÁTICOS ── -->
@@ -3558,6 +3559,26 @@ if('serviceWorker' in navigator){
     }
   });
 }
+
+// ── VERSIÓN DE LA APP (se muestra en Configuración; actualizar en cada cambio) ─
+const APP_VERSION_UI = '3.1', APP_VERSION_FECHA = '31/10/2026';
+async function mostrarVersionApp(){
+  const el = document.getElementById('versionInfo');
+  if(!el) return;
+  let sw = '—';
+  try{
+    if(navigator.serviceWorker && navigator.serviceWorker.controller){
+      sw = await new Promise(res=>{
+        const ch = new MessageChannel();
+        ch.port1.onmessage = e=>res(e.data.version);
+        navigator.serviceWorker.controller.postMessage({type:'GET_VERSION'},[ch.port2]);
+        setTimeout(()=>res('—'),1500);
+      });
+    }
+  }catch(e){}
+  el.textContent = 'Versión ' + APP_VERSION_UI + ' · ' + APP_VERSION_FECHA + ' · caché ' + sw;
+}
+window.addEventListener('load', ()=>setTimeout(mostrarVersionApp, 1500));
 
 // ── NOTIFICACIONES DE VENCIMIENTO ─────────────────────────────────────────────
 function scheduleVencimientoChecks(){
