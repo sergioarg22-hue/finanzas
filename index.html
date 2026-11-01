@@ -965,6 +965,7 @@ input[type=date]{color-scheme:light dark}
       </div>
     </div>
   </div>
+  <div id="versionInfo" style="font-size:12px;color:var(--tm);text-align:center;margin:1rem 0"></div>
 </div>
 
 </div><!-- /wrap -->
@@ -3835,6 +3836,26 @@ if('serviceWorker' in navigator){
       .catch(e=>console.log('SW error:', e));
   });
 }
+
+// ── VERSIÓN DE LA APP (se muestra en Configuración; actualizar en cada cambio) ─
+const APP_VERSION_UI = '3.1', APP_VERSION_FECHA = '31/10/2026';
+async function mostrarVersionApp(){
+  const el = document.getElementById('versionInfo');
+  if(!el) return;
+  let sw = '—';
+  try{
+    if(navigator.serviceWorker && navigator.serviceWorker.controller){
+      sw = await new Promise(res=>{
+        const ch = new MessageChannel();
+        ch.port1.onmessage = e=>res(e.data.version);
+        navigator.serviceWorker.controller.postMessage({type:'GET_VERSION'},[ch.port2]);
+        setTimeout(()=>res('—'),1500);
+      });
+    }
+  }catch(e){}
+  el.textContent = 'Versión ' + APP_VERSION_UI + ' · ' + APP_VERSION_FECHA + ' · caché ' + sw;
+}
+window.addEventListener('load', ()=>setTimeout(mostrarVersionApp, 1500));
 
 // ── ACTIVAR NOTIFICACIONES PUSH REALES (recordatorio diario 9hs) ─────────────
 const VAPID_PUBLIC_KEY = 'BPhcqKg4ThCHx_B8j3XJpBZzGQp3Uv_mV2rPP7D9iNT4sfDeoYtdq2ScK1hHSiB9ulwLp-lQCLKYNvqruQGpr9g';
